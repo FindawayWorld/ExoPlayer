@@ -92,6 +92,9 @@ public final class AudioTrack {
   /** Represents an unset {@link android.media.AudioTrack} session identifier. */
   public static final int SESSION_ID_NOT_SET = 0;
 
+  /** The default multiplication factor used when determining the size of the track's buffer. */
+  public static final float DEFAULT_MIN_BUFFER_MULTIPLICATION_FACTOR = 1;
+
   /** Returned by {@link #getCurrentPositionUs} when the position is not set. */
   public static final long CURRENT_POSITION_NOT_SET = Long.MIN_VALUE;
 
