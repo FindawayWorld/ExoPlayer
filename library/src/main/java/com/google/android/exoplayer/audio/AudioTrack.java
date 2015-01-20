@@ -29,6 +29,8 @@ import android.media.MediaFormat;
 import android.os.ConditionVariable;
 import android.util.Log;
 
+import org.vinuxproject.sonic.Sonic;
+
 import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
 
@@ -151,6 +153,7 @@ public final class AudioTrack {
   private android.media.AudioTrack keepSessionIdAudioTrack;
 
   private android.media.AudioTrack audioTrack;
+  private Sonic sonic;
   private int sampleRate;
   private int channelConfig;
   private int encoding;
@@ -172,6 +175,7 @@ public final class AudioTrack {
   private long resumeSystemTimeUs;
   private long latencyUs;
   private float volume;
+  private float speed = 1f;
 
   private byte[] temporaryBuffer;
   private int temporaryBufferOffset;
@@ -535,6 +539,13 @@ public final class AudioTrack {
     // The value of minBufferSize can be slightly less than what's actually required for playback
     // to start, hence the multiplication factor.
     return submittedBytes > (minBufferSize * 3) / 2;
+  }
+
+  public void setPlaybackSpeed(float speed) {
+      this.speed = speed;
+      if (sonic != null) {
+          sonic.setSpeed(speed);
+      }
   }
 
   /** Sets the playback volume. */
