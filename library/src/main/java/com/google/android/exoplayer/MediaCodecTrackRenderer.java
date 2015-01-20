@@ -350,12 +350,12 @@ public abstract class MediaCodecTrackRenderer extends TrackRenderer {
       decoderInfo = getDecoderInfo(mimeType, requiresSecureDecoder);
     } catch (DecoderQueryException e) {
       notifyAndThrowDecoderInitError(new DecoderInitializationException(format, e,
-          DecoderInitializationException.DECODER_QUERY_ERROR));
+              DecoderInitializationException.DECODER_QUERY_ERROR));
     }
 
     if (decoderInfo == null) {
       notifyAndThrowDecoderInitError(new DecoderInitializationException(format, null,
-          DecoderInitializationException.NO_SUITABLE_DECODER_ERROR));
+              DecoderInitializationException.NO_SUITABLE_DECODER_ERROR));
     }
 
     String decoderName = decoderInfo.name;
@@ -367,14 +367,14 @@ public abstract class MediaCodecTrackRenderer extends TrackRenderer {
       codec.start();
       long codecInitializedTimestamp = SystemClock.elapsedRealtime();
       notifyDecoderInitialized(decoderName, codecInitializedTimestamp,
-          codecInitializedTimestamp - codecInitializingTimestamp);
+              codecInitializedTimestamp - codecInitializingTimestamp);
       inputBuffers = codec.getInputBuffers();
       outputBuffers = codec.getOutputBuffers();
     } catch (Exception e) {
       notifyAndThrowDecoderInitError(new DecoderInitializationException(format, e, decoderName));
     }
     codecHotswapTimeMs = getState() == TrackRenderer.STATE_STARTED ?
-        SystemClock.elapsedRealtime() : -1;
+            SystemClock.elapsedRealtime() : -1;
     inputIndex = -1;
     outputIndex = -1;
     waitingForFirstSyncFrame = true;
