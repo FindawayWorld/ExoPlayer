@@ -21,6 +21,8 @@ import com.google.android.exoplayer.util.Assertions;
 import com.google.android.exoplayer.util.MimeTypes;
 import com.google.android.exoplayer.util.Util;
 
+import org.vinuxproject.sonic.Sonic;
+
 import android.annotation.TargetApi;
 import android.media.AudioFormat;
 import android.media.AudioManager;
@@ -28,8 +30,6 @@ import android.media.AudioTimestamp;
 import android.media.MediaFormat;
 import android.os.ConditionVariable;
 import android.util.Log;
-
-import org.vinuxproject.sonic.Sonic;
 
 import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
@@ -53,6 +53,8 @@ import java.nio.ByteBuffer;
  */
 @TargetApi(16)
 public final class AudioTrack {
+
+  private byte[] sonicBuffer;
 
   /**
    * Thrown when a failure occurs instantiating an {@link android.media.AudioTrack}.
@@ -167,9 +169,11 @@ public final class AudioTrack {
   private long lastPlayheadSampleTimeUs;
   private boolean audioTimestampSet;
   private long lastTimestampSampleTimeUs;
+  private long lastRawPlaybackHeadPosition;
+  private long rawPlaybackHeadWrapCount;
 
   private Method getLatencyMethod;
-  private long submittedBytes;
+  private float submittedBytes;
   private int startMediaTimeState;
   private long startMediaTimeUs;
   private long resumeSystemTimeUs;
@@ -455,14 +459,15 @@ public final class AudioTrack {
 
       // This is the first time we've seen this {@code buffer}.
       // Note: presentationTimeUs corresponds to the end of the sample, not the start.
-      long bufferStartTime = presentationTimeUs - framesToDurationUs(bytesToFrames(size));
-      if (startMediaTimeState == START_NOT_SET) {
+      long bufferStartTime = presentationTimeUs - framesToDurationUs(bytesToFrames(size) * speed);
+      if (startMediaTimeUs == START_NOT_SET) {
+
         startMediaTimeUs = Math.max(0, bufferStartTime);
         startMediaTimeState = START_IN_SYNC;
       } else {
         // Sanity check that bufferStartTime is consistent with the expected value.
         long expectedBufferStartTime = startMediaTimeUs
-            + framesToDurationUs(bytesToFrames(submittedBytes));
+            + framesToDurationUs(bytesToFrames(submittedBytes) * speed);
         if (startMediaTimeState == START_IN_SYNC
             && Math.abs(expectedBufferStartTime - bufferStartTime) > 200000) {
           Log.e(TAG, "Discontinuity detected [expected " + expectedBufferStartTime + ", got "
@@ -479,21 +484,44 @@ public final class AudioTrack {
       }
     }
 
-    if (temporaryBufferSize == 0) {
-      temporaryBufferSize = size;
-      buffer.position(offset);
-      if (Util.SDK_INT < 21) {
-        // Copy {@code buffer} into {@code temporaryBuffer}.
-        if (temporaryBuffer == null || temporaryBuffer.length < size) {
-          temporaryBuffer = new byte[size];
-        }
-        buffer.get(temporaryBuffer, 0, size);
-        temporaryBufferOffset = 0;
+    if (size == 0) {
+      return result;
+    }
+
+    if (sonic == null) {
+      final int numChannels;
+      if (channelConfig == AudioFormat.CHANNEL_IN_MONO) {
+        numChannels = 1;
+      } else if (channelConfig == AudioFormat.CHANNEL_IN_STEREO) {
+        numChannels = 2;
+      } else {
+        numChannels = 1;
+        Log.e(TAG, "Surround channels are not supported at this time");
       }
+      sonic = new Sonic(sampleRate, numChannels);
+      sonic.setSpeed(speed);
+    }
+
+    if (temporaryBufferSize == 0) {
+      buffer.position(offset);
+      if (sonicBuffer == null || sonicBuffer.length < size) {
+        sonicBuffer = new byte[size];
+      }
+      buffer.get(sonicBuffer, 0, size);
+      sonic.putBytes(sonicBuffer, size);
+
+      temporaryBufferSize = sonic.availableBytes();
+      if (temporaryBuffer == null || temporaryBuffer.length < temporaryBufferSize) {
+        temporaryBuffer = new byte[temporaryBufferSize];
+      }
+      sonic.receiveBytes(temporaryBuffer, temporaryBufferSize);
+      temporaryBufferOffset = 0;
     }
 
     int bytesWritten = 0;
-    if (Util.SDK_INT < 21) {
+    // TODO: non-blocking writing with SDK21 is not supported right now. If we want that as well, we
+    // need to convert the temporaryBuffer into a ByteBuffer
+    if (Util.SDK_INT < 21 || true) {
       // Work out how many bytes we can write without the risk of blocking.
       int bytesPending =
           (int) (submittedBytes - (audioTrackUtil.getPlaybackHeadPosition() * frameSize));
@@ -506,6 +534,7 @@ public final class AudioTrack {
         }
       }
     } else {
+      // Right now this will write the original byte stream. see the to-do item above
       bytesWritten = writeNonBlockingV21(audioTrack, buffer, temporaryBufferSize);
     }
 
@@ -630,6 +659,7 @@ public final class AudioTrack {
     new Thread() {
       @Override
       public void run() {
+
         toRelease.release();
       }
     }.start();
@@ -735,7 +765,36 @@ public final class AudioTrack {
     throw new InitializationException(state, sampleRate, channelConfig, bufferSize);
   }
 
-  private long bytesToFrames(long byteCount) {
+  /**
+   * {@link android.media.AudioTrack#getPlaybackHeadPosition()} returns a value intended to be
+   * interpreted as an unsigned 32 bit integer, which also wraps around periodically. This method
+   * returns the playback head position as a long that will only wrap around if the value exceeds
+   * {@link Long#MAX_VALUE} (which in practice will never happen).
+   *
+   * @return {@link android.media.AudioTrack#getPlaybackHeadPosition()} of {@link #audioTrack}
+   *     expressed as a long.
+   */
+  private long getPlaybackPositionFrames() {
+    long rawPlaybackHeadPosition = 0xFFFFFFFFL & audioTrack.getPlaybackHeadPosition();
+    if (lastRawPlaybackHeadPosition > rawPlaybackHeadPosition) {
+      // The value must have wrapped around.
+      rawPlaybackHeadWrapCount++;
+    }
+    lastRawPlaybackHeadPosition = rawPlaybackHeadPosition;
+    return rawPlaybackHeadPosition + (rawPlaybackHeadWrapCount << 32);
+  }
+
+  private long getPlaybackPositionUs() {
+    return framesToDurationUs(getPlaybackPositionFrames());
+  }
+
+  private long framesToBytes(long frameCount) {
+    // This method is unused on SDK >= 21.
+    return frameCount * frameSize;
+  }
+
+  private float bytesToFrames(float byteCount) {
+
     if (isAc3) {
       return
           ac3Bitrate == UNKNOWN_AC3_BITRATE ? 0L : byteCount * 8 * sampleRate / (1000 * ac3Bitrate);
@@ -744,8 +803,8 @@ public final class AudioTrack {
     }
   }
 
-  private long framesToDurationUs(long frameCount) {
-    return (frameCount * C.MICROS_PER_SECOND) / sampleRate;
+  private long framesToDurationUs(float frameCount) {
+    return (long) ((frameCount * C.MICROS_PER_SECOND) / sampleRate);
   }
 
   private long durationUsToFrames(long durationUs) {
