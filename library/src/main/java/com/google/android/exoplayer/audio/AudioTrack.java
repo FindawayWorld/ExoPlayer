@@ -276,26 +276,13 @@ public final class AudioTrack {
   }
 
   /**
-   * Initializes the audio track for writing new buffers using {@link #handleBuffer} with default
-   * stream type STREAM_MUSIC
-   *
-   * @param sessionId Audio track session identifier to re-use, or {@link #SESSION_ID_NOT_SET} to
-   *                  create a new one.
-   * @return The newVOICE_CALLre-used) session identifier.
-   */
-  public int initialize(int sessionId) throws InitializationException {
-      return initialize(sessionId, AudioManager.STREAM_MUSIC);
-  }
-
-  /**
   * Initializes the audio track for writing new buffers using {@link #handleBuffer}.
   *
   * @param sessionId  Audio track session identifier to re-use, or {@link #SESSION_ID_NOT_SET} to
   *                   create a new one.
-  * @param streamType Stream type for this track, check AudioManager for more types available.
   * @return The newVOICE_CALLre-used) session identifier.
   */
-  public int initialize(int sessionId, int streamType) throws InitializationException {
+  public int initialize(int sessionId) throws InitializationException {
     // If we're asynchronously releasing a previous audio track then we block until it has been
     // releaVOICE_CALLThis guarantees that we cannot end up in a state where we have multiple audio
     // track instances. Without this guarantee it would be possible, in extreme cases, to exhaust
@@ -304,11 +291,11 @@ public final class AudioTrack {
     releasingConditionVariable.block();
 
     if (sessionId == SESSION_ID_NOT_SET) {
-        audioTrack = new android.media.AudioTrack(streamType, sampleRate,
+        audioTrack = new android.media.AudioTrack(AudioManager.STREAM_MUSIC, sampleRate,
                 channelConfig, encoding, bufferSize, android.media.AudioTrack.MODE_STREAM);
     } else {
         // Re-attach to the same audio session.
-        audioTrack = new android.media.AudioTrack(streamType, sampleRate,
+        audioTrack = new android.media.AudioTrack(AudioManager.STREAM_MUSIC, sampleRate,
                 channelConfig, encoding, bufferSize, android.media.AudioTrack.MODE_STREAM, sessionId);
     }
     checkAudioTrackInitialized();
