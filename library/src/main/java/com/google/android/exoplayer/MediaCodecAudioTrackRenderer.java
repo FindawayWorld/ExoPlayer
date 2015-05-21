@@ -73,10 +73,11 @@ public class MediaCodecAudioTrackRenderer extends MediaCodecTrackRenderer {
   private int audioSessionId;
   private long currentPositionUs;
 
-  public MediaCodecAudioTrackRenderer(SampleSource source, float speed) {
-      this(source, null, true);
-      this.audioTrack.setPlaybackSpeed(speed);
-  }
+    public MediaCodecAudioTrackRenderer(SampleSource source, int streamType, float speed) {
+        this(source, null, true);
+        this.audioTrack.setPlaybackSpeed(speed);
+        this.audioTrack.setStreamType(streamType);
+    }
 
   /**
    * @param source The upstream source from which the renderer obtains samples.
