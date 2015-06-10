@@ -314,14 +314,14 @@ public class MediaCodecHooloopAudioTrackRenderer extends MediaCodecTrackRenderer
         // initialization of the audio track to fail.
         audioTrackReleasingConditionVariable.block();
         if (audioSessionId == 0) {
-            audioTrack = new AudioTrack(AudioManager.STREAM_VOICE_CALL, sampleRate, channelConfig,
+            audioTrack = new AudioTrack(AudioManager.STREAM_MUSIC, sampleRate, channelConfig,
                     AudioFormat.ENCODING_PCM_16BIT, bufferSize, AudioTrack.MODE_STREAM);
             checkAudioTrackInitialized();
             audioSessionId = audioTrack.getAudioSessionId();
             onAudioSessionId(audioSessionId);
         } else {
             // Re-attach to the same audio session.
-            audioTrack = new AudioTrack(AudioManager.STREAM_VOICE_CALL, sampleRate, channelConfig,
+            audioTrack = new AudioTrack(AudioManager.STREAM_MUSIC, sampleRate, channelConfig,
                     AudioFormat.ENCODING_PCM_16BIT, bufferSize, AudioTrack.MODE_STREAM, audioSessionId);
             checkAudioTrackInitialized();
         }
