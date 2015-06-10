@@ -111,6 +111,11 @@ import android.widget.TextView;
     currentPositionUs = timeUs;
   }
 
+  @Override
+  protected void setPlaybackSpeed(float speed) throws ExoPlaybackException {
+
+  }
+
   private void maybeFail() throws ExoPlaybackException {
     if (pendingFailure) {
       pendingFailure = false;
