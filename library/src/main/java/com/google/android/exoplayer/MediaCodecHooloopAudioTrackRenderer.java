@@ -15,6 +15,13 @@
  */
 package com.google.android.exoplayer;
 
+import com.google.android.exoplayer.drm.DrmSessionManager;
+import com.google.android.exoplayer.util.Assertions;
+import com.google.android.exoplayer.util.MimeTypes;
+import com.google.android.exoplayer.util.Util;
+
+import org.vinuxproject.sonic.Sonic;
+
 import android.annotation.TargetApi;
 import android.media.AudioFormat;
 import android.media.AudioManager;
@@ -25,13 +32,6 @@ import android.media.MediaFormat;
 import android.os.ConditionVariable;
 import android.os.Handler;
 import android.util.Log;
-
-import com.google.android.exoplayer.drm.DrmSessionManager;
-import com.google.android.exoplayer.util.Assertions;
-import com.google.android.exoplayer.util.MimeTypes;
-import com.google.android.exoplayer.util.Util;
-
-import org.vinuxproject.sonic.Sonic;
 
 import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
@@ -648,16 +648,16 @@ public class MediaCodecHooloopAudioTrackRenderer extends MediaCodecTrackRenderer
         int bytesToWrite = bufferSize - bytesPending;
 
         if (bytesToWrite == 0) {
-            sonic.flush();
+            sonic.flushStream();
         }
 
         bytesToWrite = Math.min(temporaryBufferSize, bytesToWrite);
-        sonic.putBytes(temporaryBuffer, temporaryBuffer.length);
+        sonic.writeBytesToStream(temporaryBuffer, temporaryBuffer.length);
 
-        int available = sonic.availableBytes();
+        int available = sonic.samplesAvailable();
         byte[] modifiedSamples = new byte[available];
 
-        sonic.receiveBytes(modifiedSamples, available);
+        sonic.readBytesFromStream(modifiedSamples, available);
         audioTrack.write(modifiedSamples, 0, available);
 
         temporaryBufferSize -= bytesToWrite;

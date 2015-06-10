@@ -15,6 +15,12 @@
  */
 package com.google.android.exoplayer.audio;
 
+import com.google.android.exoplayer.C;
+import com.google.android.exoplayer.util.Assertions;
+import com.google.android.exoplayer.util.Util;
+
+import org.vinuxproject.sonic.Sonic;
+
 import android.annotation.SuppressLint;
 import android.annotation.TargetApi;
 import android.media.AudioFormat;
@@ -23,12 +29,6 @@ import android.media.AudioTimestamp;
 import android.media.MediaFormat;
 import android.os.ConditionVariable;
 import android.util.Log;
-
-import com.google.android.exoplayer.C;
-import com.google.android.exoplayer.util.Assertions;
-import com.google.android.exoplayer.util.Util;
-
-import org.vinuxproject.sonic.Sonic;
 
 import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
@@ -451,13 +451,13 @@ public final class AudioTrack {
         sonicBuffer = new byte[size];
       }
       buffer.get(sonicBuffer, 0, size);
-      sonic.putBytes(sonicBuffer, size);
+      sonic.writeBytesToStream(sonicBuffer, size);
 
-      temporaryBufferSize = sonic.availableBytes();
+      temporaryBufferSize = sonic.samplesAvailable();
       if (temporaryBuffer == null || temporaryBuffer.length < temporaryBufferSize) {
         temporaryBuffer = new byte[temporaryBufferSize];
       }
-      sonic.receiveBytes(temporaryBuffer, temporaryBufferSize);
+      sonic.readBytesFromStream(temporaryBuffer, temporaryBufferSize);
       temporaryBufferOffset = 0;
 
       if (Util.SDK_INT >= 21) {
