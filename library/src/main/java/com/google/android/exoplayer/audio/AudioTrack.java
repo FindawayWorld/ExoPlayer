@@ -19,6 +19,7 @@ import com.google.android.exoplayer.C;
 import com.google.android.exoplayer.util.Ac3Util;
 import com.google.android.exoplayer.util.Assertions;
 import com.google.android.exoplayer.util.MimeTypes;
+
 import com.google.android.exoplayer.util.Util;
 
 import org.vinuxproject.sonic.Sonic;
@@ -509,13 +510,13 @@ public final class AudioTrack {
         sonicBuffer = new byte[size];
       }
       buffer.get(sonicBuffer, 0, size);
-      sonic.putBytes(sonicBuffer, size);
+      sonic.writeBytesToStream(sonicBuffer, size);
 
-      temporaryBufferSize = sonic.availableBytes();
+      temporaryBufferSize = sonic.samplesAvailable();
       if (temporaryBuffer == null || temporaryBuffer.length < temporaryBufferSize) {
         temporaryBuffer = new byte[temporaryBufferSize];
       }
-      sonic.receiveBytes(temporaryBuffer, temporaryBufferSize);
+      sonic.readBytesFromStream(temporaryBuffer, temporaryBufferSize);
       temporaryBufferOffset = 0;
 
       if (Util.SDK_INT >= 21) {

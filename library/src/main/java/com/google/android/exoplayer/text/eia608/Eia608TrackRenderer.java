@@ -120,6 +120,11 @@ public class Eia608TrackRenderer extends TrackRenderer implements Callback {
     seekToInternal(positionUs);
   }
 
+  @Override
+  protected void setPlaybackSpeed(float speed) throws ExoPlaybackException {
+
+  }
+
   private void seekToInternal(long positionUs) {
     currentPositionUs = positionUs;
     inputStreamEnded = false;
